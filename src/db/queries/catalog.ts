@@ -1,10 +1,10 @@
 import "server-only";
 
-import { and, asc, eq, isNotNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { cache } from "react";
 
 import { db } from "@/db";
-import { categories, products } from "@/db/schema";
+import { categories, products, productStock } from "@/db/schema";
 import type { Category, Product } from "@/lib/catalog";
 
 // Server-side catalogue reads. Rows are mapped to the `Product` shape the
@@ -132,4 +132,24 @@ export const getFeaturedCategories = cache(async (): Promise<Category[]> => {
 
 export async function getProductSlugs() {
   return db.select({ slug: products.slug }).from(products);
+}
+
+/** Products for the given slugs, uncached so bag prices and stock are live. */
+export async function getProductsBySlugs(slugs: string[]) {
+  if (slugs.length === 0) return [];
+  const rows = await db.query.products.findMany({
+    where: inArray(products.slug, slugs),
+    with: withCategoryAndStock,
+  });
+  return rows.map(toProduct);
+}
+
+/** Live stock for one size of a product, or undefined if either is unknown. */
+export async function getSizeStock(slug: string, size: string) {
+  const [row] = await db
+    .select({ quantity: productStock.quantity })
+    .from(productStock)
+    .innerJoin(products, eq(products.id, productStock.productId))
+    .where(and(eq(products.slug, slug), eq(productStock.size, size)));
+  return row?.quantity;
 }

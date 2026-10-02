@@ -137,6 +137,7 @@ export default async function ProductPage({
             </p>
 
             <PurchasePanel
+              slug={product.slug}
               productName={product.name}
               sizes={product.sizes}
               stock={quantity}
