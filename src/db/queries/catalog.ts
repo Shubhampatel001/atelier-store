@@ -71,6 +71,31 @@ export const getNewArrivals = cache(async (limit: number = 8) => {
   return rows.map(toProduct);
 });
 
+export const getCategory = cache(async (slug: string) => {
+  const [category] = await db
+    .select({ id: categories.id, slug: categories.slug, name: categories.name })
+    .from(categories)
+    .where(eq(categories.slug, slug));
+  return category;
+});
+
+/** Every product in a category, newest first. */
+export const getCategoryProducts = cache(async (categoryId: number) => {
+  const rows = await db.query.products.findMany({
+    where: eq(products.categoryId, categoryId),
+    orderBy: (product, { asc, desc }) => [
+      desc(product.createdAt),
+      asc(product.id),
+    ],
+    with: withCategoryAndStock,
+  });
+  return rows.map(toProduct);
+});
+
+export async function getCategorySlugs() {
+  return db.select({ category: categories.slug }).from(categories);
+}
+
 /** Same-category products first, then the rest of the catalogue. */
 export async function getRelatedProducts(product: Product, limit = 4) {
   // Plain identifiers on purpose: the relational query builder rewrites
