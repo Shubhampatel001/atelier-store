@@ -14,7 +14,7 @@ npm run typecheck      # tsc --noEmit
 npm run db:generate    # generate SQL migrations from src/db/schema into ./drizzle
 npm run db:migrate     # apply migrations
 npm run db:push        # push schema directly (prototyping only)
-npm run db:studio      # Drizzle Studio
+npm run db:studio      # Drizzle Studio (uses STUDIO_DATABASE_URL, see below)
 npm run db:seed        # reset catalogue tables from src/db/seed-data.ts
 npm run auth:generate  # generate Better Auth tables into src/db/schema/auth.ts
 ```
@@ -24,6 +24,8 @@ There is no test runner configured. Verify changes with `npm run typecheck` and 
 ## Environment
 
 Copy `.env.example` to `.env.local`. Both the app and `drizzle.config.ts` read `.env.local` (Drizzle Kit loads it explicitly via `dotenv`). Required: `DATABASE_URL` (Neon pooled connection string), `BETTER_AUTH_SECRET` (`npx auth@latest secret`), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`.
+
+`db:studio` uses `drizzle.studio.config.ts` and requires `STUDIO_DATABASE_URL`. This must be a least-privilege role created with `scripts/studio-role.sql`, never the owner credential, and the config refuses to start if it matches `DATABASE_URL`. Drizzle Studio's local server runs SQL from unauthenticated requests and sends wildcard CORS headers, so any website open in the browser while it runs can reach it. Keep Studio sessions short.
 
 `src/db/index.ts` throws at import time if `DATABASE_URL` is unset, so anything importing `@/db` or `@/lib/auth` (including the `/api/auth/*` route) fails without it.
 
