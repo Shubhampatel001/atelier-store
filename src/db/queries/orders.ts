@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
+
 import { db } from "@/db";
 import {
   orderItems,
@@ -54,17 +55,22 @@ export async function deleteOrder(id: string) {
 /** Move a still-pending order to a terminal unpaid status. */
 export async function closePendingOrder(
   sessionId: string,
+  orderId: string | null,
   status: "failed" | "expired",
 ) {
+  // An order whose session ID was never attached (see `startCheckout`) is
+  // matched through the session's `order_id` metadata instead.
+  const matchesSession = orderId
+    ? or(
+        eq(orders.stripeCheckoutSessionId, sessionId),
+        and(eq(orders.id, orderId), isNull(orders.stripeCheckoutSessionId)),
+      )
+    : eq(orders.stripeCheckoutSessionId, sessionId);
+
   await db
     .update(orders)
-    .set({ status })
-    .where(
-      and(
-        eq(orders.stripeCheckoutSessionId, sessionId),
-        eq(orders.status, "pending"),
-      ),
-    );
+    .set({ status, stripeCheckoutSessionId: sessionId })
+    .where(and(matchesSession, eq(orders.status, "pending")));
 }
 
 export type PaidDetails = {

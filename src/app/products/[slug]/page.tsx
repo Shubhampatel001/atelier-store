@@ -90,7 +90,10 @@ export default async function ProductPage({
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href={categoryHref(product.category)} className="link-quiet">
+            <Link
+              href={categoryHref(product.categorySlug)}
+              className="link-quiet"
+            >
               {product.category}
             </Link>
           </li>
@@ -109,7 +112,7 @@ export default async function ProductPage({
             <header className="flex flex-col gap-4">
               <div className="flex items-center justify-between gap-4">
                 <Link
-                  href={categoryHref(product.category)}
+                  href={categoryHref(product.categorySlug)}
                   className="type-label link-quiet text-muted"
                 >
                   {product.category}
