@@ -87,6 +87,10 @@ export type PaidDetails = {
  * Stock is decremented only for the claimed order and only where enough
  * remains.
  *
+ * An order whose session ID was never attached (see `startCheckout`) is
+ * claimed by the session that names it in `order_id` metadata, which
+ * `fulfillCheckout` reads from Stripe, and gets that session ID now.
+ *
  * Returns the slugs whose stock changed, or null if already fulfilled.
  */
 export async function markOrderPaid(details: PaidDetails) {
@@ -114,6 +118,7 @@ export async function markOrderPaid(details: PaidDetails) {
           updated_at = now(),
           email = ${details.email},
           total = ${details.total},
+          stripe_checkout_session_id = ${details.sessionId},
           stripe_payment_intent_id = ${details.paymentIntentId},
           shipping_address = ${
             details.shippingAddress
@@ -121,7 +126,8 @@ export async function markOrderPaid(details: PaidDetails) {
               : null
           }::jsonb
       where id = ${details.orderId}
-        and stripe_checkout_session_id = ${details.sessionId}
+        and (stripe_checkout_session_id = ${details.sessionId}
+             or stripe_checkout_session_id is null)
         and status = 'pending'
       returning id
     ),

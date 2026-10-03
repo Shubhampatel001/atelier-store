@@ -255,13 +255,18 @@ export async function startCheckout(): Promise<BagActionResult> {
   try {
     await attachCheckoutSession(orderId, session.id);
   } catch (error) {
-    // Without the session ID the order can never be fulfilled, so close the
-    // session before anyone can pay it.
+    // Close the session before anyone can pay it, then drop the order. If
+    // the session can't be closed it may still be paid, so keep the order:
+    // fulfilment can claim it through the session's `order_id` metadata.
     console.error("Failed to attach Checkout Session to order", error);
     try {
       await getStripe().checkout.sessions.expire(session.id);
     } catch (expireError) {
-      console.error(`Failed to expire Checkout Session ${session.id}`, expireError);
+      console.error(
+        `Failed to expire Checkout Session ${session.id}; keeping order ${orderId}`,
+        expireError,
+      );
+      return failed;
     }
     await discardOrder(orderId);
     return failed;
