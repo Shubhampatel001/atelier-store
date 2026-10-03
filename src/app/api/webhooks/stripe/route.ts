@@ -33,10 +33,18 @@ export async function POST(request: Request) {
         await fulfillCheckout(event.data.object.id);
         break;
       case "checkout.session.async_payment_failed":
-        await closePendingOrder(event.data.object.id, "failed");
+        await closePendingOrder(
+          event.data.object.id,
+          orderIdOf(event.data.object),
+          "failed",
+        );
         break;
       case "checkout.session.expired":
-        await closePendingOrder(event.data.object.id, "expired");
+        await closePendingOrder(
+          event.data.object.id,
+          orderIdOf(event.data.object),
+          "expired",
+        );
         break;
     }
   } catch (error) {
@@ -46,4 +54,10 @@ export async function POST(request: Request) {
   }
 
   return new Response(null, { status: 200 });
+}
+
+/** The order a session was created for, as set by `startCheckout`. */
+function orderIdOf(session: Stripe.Checkout.Session) {
+  const orderId = session.metadata?.order_id;
+  return orderId && session.client_reference_id === orderId ? orderId : null;
 }
