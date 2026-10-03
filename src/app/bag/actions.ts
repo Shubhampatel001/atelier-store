@@ -22,6 +22,7 @@ import {
   serializeBag,
   type BagLine,
 } from "@/lib/bag";
+import { getSession } from "@/lib/session";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 export type BagActionResult = { ok: true } | { ok: false; error: string };
@@ -181,9 +182,12 @@ export async function startCheckout(): Promise<BagActionResult> {
     0,
   );
 
+  // Signed-in checkouts are saved to the account; guests stay anonymous.
+  const user = (await getSession())?.user ?? null;
+
   const orderId = randomUUID();
   try {
-    await createPendingOrder(orderId, items, subtotal);
+    await createPendingOrder(orderId, items, subtotal, user?.id ?? null);
   } catch (error) {
     console.error("Failed to create pending order", error);
     return { ok: false, error: "We couldn't start checkout. Please try again." };
@@ -203,6 +207,7 @@ export async function startCheckout(): Promise<BagActionResult> {
       {
         mode: "payment",
         client_reference_id: orderId,
+        customer_email: user?.email,
         metadata: { order_id: orderId },
         payment_intent_data: { metadata: { order_id: orderId } },
         integration_identifier: CHECKOUT_INTEGRATION_ID,

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -26,9 +26,10 @@ export async function createPendingOrder(
   id: string,
   items: NewOrderItem[],
   subtotal: number,
+  userId: string | null,
 ) {
   await db.batch([
-    db.insert(orders).values({ id, subtotal }),
+    db.insert(orders).values({ id, subtotal, userId }),
     db.insert(orderItems).values(
       items.map((item) => ({
         ...item,
@@ -160,5 +161,32 @@ export async function getOrderBySession(sessionId: string) {
   return db.query.orders.findFirst({
     where: eq(orders.stripeCheckoutSessionId, sessionId),
     with: { items: { orderBy: (item, { asc }) => [asc(item.id)] } },
+  });
+}
+
+/**
+ * A customer's placed orders, newest first. Pending checkouts and unpaid
+ * sessions are left out: they never became orders from the customer's view.
+ */
+export async function getOrdersForUser(userId: string) {
+  return db.query.orders.findMany({
+    where: and(
+      eq(orders.userId, userId),
+      inArray(orders.status, ["paid", "needs_review"]),
+    ),
+    orderBy: [desc(orders.createdAt)],
+    columns: {
+      id: true,
+      status: true,
+      subtotal: true,
+      total: true,
+      createdAt: true,
+    },
+    with: {
+      items: {
+        orderBy: (item, { asc }) => [asc(item.id)],
+        columns: { id: true, name: true, image: true, quantity: true },
+      },
+    },
   });
 }

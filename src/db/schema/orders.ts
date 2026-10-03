@@ -12,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { user } from "./auth";
 import { products } from "./catalog";
 
 /**
@@ -44,6 +45,10 @@ export const orders = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     status: orderStatus("status").notNull().default("pending"),
+    /** Set when the customer was signed in at checkout; null for guests. */
+    userId: text("user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     stripeCheckoutSessionId: text("stripe_checkout_session_id").unique(),
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     email: text("email"),
@@ -64,6 +69,7 @@ export const orders = pgTable(
   },
   (table) => [
     index("orders_status_idx").on(table.status),
+    index("orders_user_id_idx").on(table.userId, table.createdAt),
     check("orders_subtotal_check", sql`${table.subtotal} >= 0`),
   ],
 );
