@@ -1,37 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
+import { addToBag } from "@/app/bag/actions";
+import { notifyBagChange } from "@/components/layout/bag-link";
 import { StockStatus } from "@/components/product/stock-status";
 import type { SizeOption } from "@/lib/catalog";
 
 type PurchasePanelProps = {
+  slug: string;
   productName: string;
   sizes?: SizeOption[];
   stock: number;
 };
 
-// Size selection, live stock state and the primary action. The bag itself is
-// not implemented yet, so adding only confirms locally.
-export function PurchasePanel({ productName, sizes, stock }: PurchasePanelProps) {
+// Size selection, live stock state and the primary action. Stock shown here
+// can be up to a minute old (ISR); `addToBag` re-checks it live.
+export function PurchasePanel({
+  slug,
+  productName,
+  sizes,
+  stock,
+}: PurchasePanelProps) {
   const singleSize = sizes?.length === 1 ? sizes[0].label : null;
   const [selected, setSelected] = useState<string | null>(singleSize);
   const [error, setError] = useState(false);
   const [added, setAdded] = useState(false);
+  const [bagError, setBagError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const selectedSize = sizes?.find((size) => size.label === selected);
   const quantity = selectedSize ? selectedSize.stock : stock;
   const soldOut = stock <= 0;
   const needsSize = Boolean(sizes && sizes.length > 1);
 
-  const addToBag = () => {
+  const add = () => {
     if (needsSize && !selectedSize) {
       setError(true);
       return;
     }
+    const size = selectedSize?.label ?? sizes?.[0]?.label;
+    if (!size) return;
+
     setError(false);
-    setAdded(true);
+    setAdded(false);
+    setBagError(null);
+    startTransition(async () => {
+      try {
+        const result = await addToBag(slug, size);
+        if (result.ok) {
+          setAdded(true);
+          notifyBagChange();
+        } else {
+          setBagError(result.error);
+        }
+      } catch {
+        setBagError("Something went wrong. Please try again.");
+      }
+    });
   };
 
   return (
@@ -63,6 +90,7 @@ export function PurchasePanel({ productName, sizes, stock }: PurchasePanelProps)
                     setSelected(size.label);
                     setError(false);
                     setAdded(false);
+                    setBagError(null);
                   }}
                   className={`min-h-11 border text-body-sm transition-colors ${
                     active
@@ -103,14 +131,26 @@ export function PurchasePanel({ productName, sizes, stock }: PurchasePanelProps)
           <button
             type="button"
             className="btn btn-primary btn-lg w-full"
-            onClick={addToBag}
+            onClick={add}
+            disabled={pending}
           >
-            Add to bag
+            {pending ? "Adding…" : "Add to bag"}
           </button>
           <p role="status" className="min-h-5 text-body-sm text-muted">
-            {added &&
-              `${productName}${selectedSize && needsSize ? `, ${selectedSize.label},` : ""} added to your bag.`}
+            {added && (
+              <>
+                {`${productName}${selectedSize && needsSize ? `, ${selectedSize.label},` : ""} added to your bag. `}
+                <Link href="/bag" className="link text-ink">
+                  View bag
+                </Link>
+              </>
+            )}
           </p>
+          {bagError && (
+            <p role="alert" className="-mt-3 text-body-sm text-sale">
+              {bagError}
+            </p>
+          )}
         </div>
       )}
     </div>
