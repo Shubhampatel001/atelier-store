@@ -25,7 +25,8 @@ export const seedCategories = [
 const sizes = (labels: string[], stock: number[]): SizeOption[] =>
   labels.map((label, index) => ({ label, stock: stock[index] ?? 0 }));
 
-export const seedProducts: Product[] = [
+// Seed rows name their category; the slug comes from `seedCategories`.
+export const seedProducts: Omit<Product, "categorySlug">[] = [
   {
     slug: "tailored-wool-trousers",
     sku: "AT-26W-0142",

@@ -21,7 +21,10 @@ export type Product = {
   slug: string;
   sku: string;
   name: string;
+  /** Category display name. */
   category: string;
+  /** Category URL segment; use with `categoryHref`. */
+  categorySlug: string;
   price: number;
   compareAtPrice?: number;
   color: string;
@@ -86,7 +89,7 @@ export function getStockState(quantity: number): StockState {
   return "in_stock";
 }
 
-export const categoryHref = (category: string) => `/${category.toLowerCase()}`;
+export const categoryHref = (categorySlug: string) => `/${categorySlug}`;
 
 export const collections: Collection[] = [
   {

@@ -11,7 +11,7 @@ import type { Category, Product } from "@/lib/catalog";
 // storefront components already use; prices are stored in cents.
 
 const withCategoryAndStock = {
-  category: { columns: { name: true } },
+  category: { columns: { name: true, slug: true } },
   stock: {
     columns: { size: true, quantity: true },
     orderBy: (stock, { asc }) => [asc(stock.position)],
@@ -21,7 +21,7 @@ const withCategoryAndStock = {
 >["with"];
 
 type ProductRow = typeof products.$inferSelect & {
-  category: { name: string };
+  category: { name: string; slug: string };
   stock: { size: string; quantity: number }[];
 };
 
@@ -33,6 +33,7 @@ function toProduct(row: ProductRow): Product {
     sku: row.sku,
     name: row.name,
     category: row.category.name,
+    categorySlug: row.category.slug,
     price: fromCents(row.price),
     compareAtPrice:
       row.compareAtPrice === null ? undefined : fromCents(row.compareAtPrice),
@@ -102,7 +103,7 @@ export async function getRelatedProducts(product: Product, limit = 4) {
   // column references in `orderBy` to the root `products` alias, which would
   // turn `categories.id` into `products.id` inside this subquery.
   const sameCategory = sql`(
-    select "id" from "categories" where "name" = ${product.category}
+    select "id" from "categories" where "slug" = ${product.categorySlug}
   )`;
   const rows = await db.query.products.findMany({
     where: ne(products.slug, product.slug),
