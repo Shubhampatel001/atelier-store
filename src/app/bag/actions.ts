@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type Stripe from "stripe";
 
 import { getBag, readBagLines } from "@/db/queries/bag";
 import { getSizeStock } from "@/db/queries/catalog";
@@ -191,9 +192,14 @@ export async function startCheckout(): Promise<BagActionResult> {
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")
     .replace(/\/$/, "");
 
-  let url: string | null;
+  const failed: BagActionResult = {
+    ok: false,
+    error: "We couldn't start checkout. Please try again.",
+  };
+
+  let session: Stripe.Checkout.Session;
   try {
-    const session = await getStripe().checkout.sessions.create(
+    session = await getStripe().checkout.sessions.create(
       {
         mode: "payment",
         client_reference_id: orderId,
@@ -240,17 +246,36 @@ export async function startCheckout(): Promise<BagActionResult> {
       },
       { idempotencyKey: `checkout-session:${orderId}` },
     );
-    await attachCheckoutSession(orderId, session.id);
-    url = session.url;
   } catch (error) {
     console.error("Failed to create Stripe Checkout Session", error);
-    await deleteOrder(orderId);
-    return {
-      ok: false,
-      error: "We couldn't start checkout. Please try again.",
-    };
+    await discardOrder(orderId);
+    return failed;
   }
 
-  if (!url) return { ok: false, error: "We couldn't start checkout." };
-  redirect(url);
+  try {
+    await attachCheckoutSession(orderId, session.id);
+  } catch (error) {
+    // Without the session ID the order can never be fulfilled, so close the
+    // session before anyone can pay it.
+    console.error("Failed to attach Checkout Session to order", error);
+    try {
+      await getStripe().checkout.sessions.expire(session.id);
+    } catch (expireError) {
+      console.error(`Failed to expire Checkout Session ${session.id}`, expireError);
+    }
+    await discardOrder(orderId);
+    return failed;
+  }
+
+  if (!session.url) return failed;
+  redirect(session.url);
+}
+
+/** Best-effort cleanup of an order whose checkout never started. */
+async function discardOrder(orderId: string) {
+  try {
+    await deleteOrder(orderId);
+  } catch (error) {
+    console.error(`Failed to delete pending order ${orderId}`, error);
+  }
 }

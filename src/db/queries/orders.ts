@@ -78,19 +78,38 @@ export type PaidDetails = {
 /**
  * Marks a pending order paid and decrements stock, exactly once.
  *
- * One statement, so it is atomic on the HTTP driver: the order row is
- * claimed only while still `pending` (concurrent webhook and success-page
- * calls serialise on that row lock), and stock is decremented only for
- * the claimed order and only where enough remains. Lines that could not be
- * decremented mean the order was oversold and needs a person to resolve it.
+ * One statement, so it is atomic on the HTTP driver. The order's stock rows
+ * are locked first (in a fixed order, so concurrent orders can't deadlock)
+ * and checked against the lines. The order row is then claimed only while
+ * still `pending` (concurrent webhook and success-page calls serialise on
+ * that row lock) and gets its final status in the same write: `paid`, or
+ * `needs_review` if any line was oversold and needs a person to resolve it.
+ * Stock is decremented only for the claimed order and only where enough
+ * remains.
  *
  * Returns the slugs whose stock changed, or null if already fulfilled.
  */
 export async function markOrderPaid(details: PaidDetails) {
   const result = await db.execute(sql`
-    with claimed as (
+    with locked as (
+      select ps.quantity >= oi.quantity as enough
+      from order_items as oi
+      join product_stock as ps
+        on ps.product_id = oi.product_id and ps.size = oi.size
+      where oi.order_id = ${details.orderId}
+      order by ps.product_id, ps.size
+      for update of ps
+    ),
+    claimed as (
       update ${orders}
-      set status = 'paid',
+      set status = (
+            case
+              when (select count(*) from locked where enough)
+                 = (select count(*) from order_items where order_id = ${details.orderId})
+              then 'paid'
+              else 'needs_review'
+            end
+          )::order_status,
           paid_at = now(),
           updated_at = now(),
           email = ${details.email},
@@ -118,25 +137,11 @@ export async function markOrderPaid(details: PaidDetails) {
     )
     select
       (select count(*) from claimed)::int as claimed,
-      (select count(*) from decremented)::int as decremented,
-      (select count(*) from order_items where order_id = ${details.orderId})::int as lines,
       (select array_agg(distinct slug) from decremented) as slugs
   `);
 
-  const [row] = result.rows as {
-    claimed: number;
-    decremented: number;
-    lines: number;
-    slugs: string[] | null;
-  }[];
+  const [row] = result.rows as { claimed: number; slugs: string[] | null }[];
   if (!row || row.claimed === 0) return null;
-
-  if (row.decremented < row.lines) {
-    await db
-      .update(orders)
-      .set({ status: "needs_review" })
-      .where(eq(orders.id, details.orderId));
-  }
   return row.slugs ?? [];
 }
 
