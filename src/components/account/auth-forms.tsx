@@ -1,46 +1,9 @@
 "use client";
 
-import { useActionState, useId, type ComponentProps } from "react";
+import { useActionState } from "react";
 
-import { signIn, signUp, type AuthFormState } from "@/app/account/actions";
-
-type FieldProps = ComponentProps<"input"> & {
-  label: string;
-  hint?: string;
-};
-
-function Field({ label, hint, ...input }: FieldProps) {
-  const id = useId();
-  const hintId = hint ? `${id}-hint` : undefined;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="type-label">
-        {label}
-      </label>
-      <input
-        id={id}
-        aria-describedby={hintId}
-        className="min-h-12 w-full border-b border-line-strong bg-transparent px-0 text-body placeholder:text-subtle"
-        {...input}
-      />
-      {hint && (
-        <p id={hintId} className="type-caption">
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function FormError({ state }: { state: AuthFormState }) {
-  if (!state) return null;
-  return (
-    <p role="alert" className="text-body-sm text-sale">
-      {state.error}
-    </p>
-  );
-}
+import { signIn, signUp } from "@/app/(store)/account/actions";
+import { Field, FormError } from "@/components/ui/form";
 
 export function SignInForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(signIn, null);
@@ -63,7 +26,7 @@ export function SignInForm({ next }: { next: string }) {
         autoComplete="current-password"
         required
       />
-      <FormError state={state} />
+      <FormError message={state?.error} />
       <button
         type="submit"
         className="btn btn-primary btn-lg w-full"
@@ -108,7 +71,7 @@ export function SignUpForm({ next }: { next: string }) {
         maxLength={128}
         hint="At least 8 characters."
       />
-      <FormError state={state} />
+      <FormError message={state?.error} />
       <button
         type="submit"
         className="btn btn-primary btn-lg w-full"

@@ -6,6 +6,7 @@ import { Price } from "@/components/product/price";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { PurchasePanel } from "@/components/product/purchase-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import {
   getProduct,
   getProductSlugs,
@@ -81,28 +82,13 @@ export default async function ProductPage({
         }}
       />
 
-      <nav aria-label="Breadcrumb" className="shell py-4 lg:py-6">
-        <ol className="type-label flex flex-wrap items-center gap-2 text-muted">
-          <li>
-            <Link href="/" className="link-quiet">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <Link
-              href={categoryHref(product.categorySlug)}
-              className="link-quiet"
-            >
-              {product.category}
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page" className="text-ink">
-            {product.name}
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          { label: product.category, href: categoryHref(product.categorySlug) },
+          { label: product.name },
+        ]}
+      />
 
       <div className="lg:shell lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-block xl:gap-section">
         <ProductGallery images={product.gallery} />

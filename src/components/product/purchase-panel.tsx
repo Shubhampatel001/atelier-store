@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 
-import { addToBag } from "@/app/bag/actions";
+import { addToBag } from "@/app/(store)/bag/actions";
 import { notifyBagChange } from "@/components/layout/bag-link";
 import { StockStatus } from "@/components/product/stock-status";
 import type { SizeOption } from "@/lib/catalog";

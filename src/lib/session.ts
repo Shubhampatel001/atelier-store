@@ -1,6 +1,7 @@
 import "server-only";
 
 import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
 import { auth } from "@/lib/auth";
@@ -9,6 +10,21 @@ import { auth } from "@/lib/auth";
 export const getSession = cache(async () =>
   auth.api.getSession({ headers: await headers() }),
 );
+
+/**
+ * The signed-in admin, or no return. Signed-out visitors go to sign-in and
+ * come back to `next`; everyone else gets a 404, so the admin area doesn't
+ * reveal it exists.
+ *
+ * Call it in every admin page, Server Action and query: layouts don't guard
+ * Server Actions or nested segments.
+ */
+export async function requireAdmin(next = "/admin") {
+  const session = await getSession();
+  if (!session) redirect(`/sign-in?next=${encodeURIComponent(safeNext(next))}`);
+  if (session.user.role !== "admin") notFound();
+  return session.user;
+}
 
 /**
  * Where to send someone after signing in. Only same-site paths are allowed,

@@ -5,6 +5,8 @@ import { BagLineItem } from "@/components/bag/bag-line-item";
 import { CheckoutButton } from "@/components/bag/checkout-button";
 import { ArrowRightIcon } from "@/components/icons";
 import { ProductCard } from "@/components/product/product-card";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { PageHeader } from "@/components/ui/page-header";
 import { getBag } from "@/db/queries/bag";
 import { getNewArrivals } from "@/db/queries/catalog";
 import { formatPrice, services } from "@/lib/catalog";
@@ -22,32 +24,22 @@ export default async function BagPage() {
 
   return (
     <main className="flex-1">
-      <nav aria-label="Breadcrumb" className="shell py-4 lg:py-6">
-        <ol className="type-label flex flex-wrap items-center gap-2 text-muted">
-          <li>
-            <Link href="/" className="link-quiet">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page" className="text-ink">
-            Shopping bag
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb
+        items={[{ label: "Home", href: "/" }, { label: "Shopping bag" }]}
+      />
 
       <div className="shell pb-section">
-        <header className="mb-block flex flex-col gap-4 pt-block sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-3">
-            <p className="type-label text-muted">Your selection</p>
-            <h1 className="type-heading">Shopping bag</h1>
-          </div>
-          {!empty && (
-            <p className="type-label text-muted">
-              {bag.count} {bag.count === 1 ? "piece" : "pieces"}
-            </p>
-          )}
-        </header>
+        <PageHeader
+          eyebrow="Your selection"
+          title="Shopping bag"
+          aside={
+            !empty && (
+              <p className="type-label text-muted">
+                {bag.count} {bag.count === 1 ? "piece" : "pieces"}
+              </p>
+            )
+          }
+        />
 
         {empty ? (
           <div className="divider flex flex-col items-center gap-6 py-section text-center">

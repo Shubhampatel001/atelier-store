@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Bodoni_Moda, Geist, Geist_Mono } from "next/font/google";
 
-import { AnnouncementBar, SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
-
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,12 +42,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
-        <AnnouncementBar />
-        <SiteHeader />
-        <div id="main" className="flex flex-1 flex-col">
-          {children}
-        </div>
-        <SiteFooter />
+        {/* Each route group renders its own chrome and the `#main` target. */}
+        {children}
       </body>
     </html>
   );

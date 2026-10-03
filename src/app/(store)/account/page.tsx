@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { signOut } from "@/app/account/actions";
+import { signOut } from "@/app/(store)/account/actions";
 import { AccountPageHeader } from "@/components/account/account-page";
 import { getOrdersForUser } from "@/db/queries/orders";
 import { formatPrice, services } from "@/lib/catalog";
@@ -36,11 +36,18 @@ export default async function AccountPage() {
         title={`Welcome, ${firstName}`}
         current="My account"
         aside={
-          <form action={signOut}>
-            <button type="submit" className="btn btn-ghost">
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-8">
+            {user.role === "admin" && (
+              <Link href="/admin" className="btn btn-ghost">
+                Admin
+              </Link>
+            )}
+            <form action={signOut}>
+              <button type="submit" className="btn btn-ghost">
+                Sign out
+              </button>
+            </form>
+          </div>
         }
       />
 

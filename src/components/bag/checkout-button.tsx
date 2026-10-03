@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 
-import { startCheckout, type BagActionResult } from "@/app/bag/actions";
+import {
+  startCheckout,
+  type BagActionResult,
+} from "@/app/(store)/bag/actions";
 
 // Posts to `startCheckout`, which redirects to Stripe on success. Errors
 // (stock changed, Stripe unavailable) come back as state and show inline.

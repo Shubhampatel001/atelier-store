@@ -8,7 +8,7 @@ import {
   removeFromBag,
   updateBagQuantity,
   type BagActionResult,
-} from "@/app/bag/actions";
+} from "@/app/(store)/bag/actions";
 import { MinusIcon, PlusIcon } from "@/components/icons";
 import { notifyBagChange } from "@/components/layout/bag-link";
 import { Price } from "@/components/product/price";

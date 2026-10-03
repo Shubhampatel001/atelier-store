@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { ArrowRightIcon } from "@/components/icons";
 import { ProductCard } from "@/components/product/product-card";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { PageHeader } from "@/components/ui/page-header";
 import type { Product } from "@/lib/catalog";
 
 /** Listing page body: breadcrumb, page heading and product grid. */
@@ -18,35 +20,21 @@ export function ProductListing({
 }) {
   return (
     <main className="flex-1">
-      <nav aria-label="Breadcrumb" className="shell py-4 lg:py-6">
-        <ol className="type-label flex flex-wrap items-center gap-2 text-muted">
-          <li>
-            <Link href="/" className="link-quiet">
-              Home
-            </Link>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page" className="text-ink">
-            {title}
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumb items={[{ label: "Home", href: "/" }, { label: title }]} />
 
       <div className="shell pb-section">
-        <header className="mb-block flex flex-col gap-4 pt-block sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex max-w-prose-narrow flex-col gap-3">
-            <p className="type-label text-muted">{eyebrow}</p>
-            <h1 className="type-heading">{title}</h1>
-            {description && (
-              <p className="text-body-sm text-muted">{description}</p>
-            )}
-          </div>
-          {products.length > 0 && (
-            <p className="type-label text-muted">
-              {products.length} {products.length === 1 ? "piece" : "pieces"}
-            </p>
-          )}
-        </header>
+        <PageHeader
+          eyebrow={eyebrow}
+          title={title}
+          description={description}
+          aside={
+            products.length > 0 && (
+              <p className="type-label text-muted">
+                {products.length} {products.length === 1 ? "piece" : "pieces"}
+              </p>
+            )
+          }
+        />
 
         {products.length > 0 ? (
           <div className="product-grid divider pt-block">

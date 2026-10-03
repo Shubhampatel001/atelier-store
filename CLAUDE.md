@@ -17,6 +17,7 @@ npm run db:push        # push schema directly (prototyping only)
 npm run db:studio      # Drizzle Studio (uses STUDIO_DATABASE_URL, see below)
 npm run db:seed        # reset catalogue tables from src/db/seed-data.ts
 npm run auth:generate  # generate Better Auth tables into src/db/schema/auth.ts
+npm run admin:grant -- <user-id> [--revoke]  # grant/revoke admin by user ID
 ```
 
 There is no test runner configured. Verify changes with `npm run typecheck` and `npm run lint`.
@@ -36,7 +37,7 @@ Next.js 16 App Router + React 19, TypeScript strict, Tailwind CSS v4, Drizzle OR
 - **Next.js version caveat:** Next 16 differs from older training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing Next-specific code. Example already in use: route-typed global helpers like `LayoutProps<"/">` in `src/app/layout.tsx` (types generated under `.next/types` / `.next/dev/types`).
 - **Database:** `src/db/index.ts` exports a single `db` built with the Neon **HTTP** driver (`drizzle-orm/neon-http`) and the full schema object. The HTTP driver has no interactive transactions. All tables live in `src/db/schema/` and must be re-exported from `src/db/schema/index.ts` — that barrel is what both the `db` client (relational queries) and Drizzle Kit (`schema: "./src/db/schema"`) consume.
 - **Auth:** `src/lib/auth.ts` is the server Better Auth instance using `drizzleAdapter(db, { provider: "pg" })`; `nextCookies()` must remain the **last** plugin. It's mounted via `toNextJsHandler` at `src/app/api/auth/[...all]/route.ts`. `src/lib/auth-client.ts` is the React client (`better-auth/react`) pointed at `NEXT_PUBLIC_APP_URL`.
-- **Tailwind v4 / design system:** configured in CSS only — everything lives in `src/app/globals.css`; there is no `tailwind.config` file. Monochrome luxury-editorial style: the default Tailwind palette and radius scale are reset (`--color-*: initial`, `--radius-*: initial`), so only system tokens exist (`paper`, `ink`, `muted`, `surface`, `line`, `sale`, …) and corners are square (`rounded-full` still works). Colour tokens map to raw `:root` variables via `@theme inline`, so `.theme-inverse` re-themes a subtree for dark bands. Use the role utilities (`type-display`, `type-heading`, `type-label`, `type-price`, …), layout primitives (`shell`, `section`, `product-grid`, `split`, `media`, `divider`), semantic spacing (`px-gutter`, `py-section`, `gap-block`), and component classes (`btn btn-primary|secondary|ghost`, `link`, `link-quiet`) rather than ad-hoc values. Fonts: Geist (sans), Bodoni Moda (`font-serif`, display), Geist Mono — loaded via `next/font` in `src/app/layout.tsx`.
+- **Tailwind v4 / design system:** configured in CSS only — everything lives in `src/app/globals.css`; there is no `tailwind.config` file. Monochrome luxury-editorial style: the default Tailwind palette and radius scale are reset (`--color-*: initial`, `--radius-*: initial`), so only system tokens exist (`paper`, `ink`, `muted`, `surface`, `line`, `sale`, …) and corners are square (`rounded-full` still works). Colour tokens map to raw `:root` variables via `@theme inline`, so `.theme-inverse` re-themes a subtree for dark bands. Use the role utilities (`type-display`, `type-heading`, `type-label`, `type-price`, …), layout primitives (`shell`, `section`, `product-grid`, `split`, `media`, `divider`), semantic spacing (`px-gutter`, `py-section`, `gap-block`), and component classes (`btn btn-primary|secondary|ghost`, `link`, `link-quiet`, `data-table`) rather than ad-hoc values. Fonts: Geist (sans), Bodoni Moda (`font-serif`, display), Geist Mono — loaded via `next/font` in `src/app/layout.tsx`.
 
 ## Catalogue data
 
@@ -54,6 +55,13 @@ Auth is email and password only. There is no email provider yet, so there is no 
 - Sign-in/sign-up are Server Actions in `src/app/account/actions.ts` calling `auth.api.*`; `nextCookies()` sets the session cookie. Read the session server-side with `getSession()` from `src/lib/session.ts`, and validate `?next=` redirects with `safeNext()`.
 - The header must not read the session: it is rendered on ISR pages. `/account`, `/sign-in` and `/sign-up` are dynamic and do their own session checks.
 - `orders.user_id` is set when the customer is signed in at checkout (nullable; guests stay anonymous). `/account` lists `paid` and `needs_review` orders only.
+
+## Routes and admin
+
+- `src/app/layout.tsx` holds only `<html>`, `<body>`, fonts and the skip link. Storefront routes live in the `(store)` route group, whose layout renders the announcement bar, header and footer; the admin lives in `(admin)/admin` with its own sidebar layout. Each group layout renders the `#main` skip-link target.
+- Shared UI is in `src/components/ui/` (`Breadcrumb`, `PageHeader`, `Field`, `FormError`); admin-only pieces are in `src/components/admin/`.
+- Admin access is `user.role === "admin"` (Better Auth `additionalFields` with `input: false`, so requests can't set it). Grant it by **user ID** only, with `npm run admin:grant`: there is no email verification, so an email address doesn't prove who owns an account.
+- `requireAdmin()` in `src/lib/session.ts` redirects signed-out visitors to sign-in and returns a 404 for everyone else. Call it in every admin page, Server Action and query (`src/db/queries/admin.ts` does); the admin layout's call is only a convenience.
 
 ## AGENTS.md
 
